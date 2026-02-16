@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import type { Stripe } from "stripe";
 
 import { NextResponse } from "next/server";
