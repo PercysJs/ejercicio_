@@ -1,20 +1,19 @@
 import type { Stripe } from "stripe";
-
-
 import { stripe } from "@/lib/stripe";
 import PrintObject from "@/app/components/PrintObject";
-import { JSX } from "react";
+import { JSX, Suspense } from "react";
 
-export default async function ResultPage({
-  searchParams,
-}: {
-  searchParams: { session_id: string };
-}): Promise<JSX.Element> {
-  if (!searchParams.session_id)
-    throw new Error("Please provide a valid session_id (`cs_test_...`)");
+// 1. Forzamos que la página sea dinámica
+export const dynamic = 'force-dynamic';
+
+async function ResultContent({ session_id }: { session_id: string }) {
+  // Si no hay ID (durante el build), mostramos un mensaje simple en lugar de un Error
+  if (!session_id) {
+    return <h2>No se encontró una sesión válida.</h2>;
+  }
 
   const checkoutSession: Stripe.Checkout.Session =
-    await stripe.checkout.sessions.retrieve(searchParams.session_id, {
+    await stripe.checkout.sessions.retrieve(session_id, {
       expand: ["line_items", "payment_intent"],
     });
 
@@ -26,5 +25,22 @@ export default async function ResultPage({
       <h3>Checkout Session response:</h3>
       <PrintObject content={checkoutSession} />
     </>
+  );
+}
+
+export default async function ResultPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ session_id: string }>; // En Next.js 15+ searchParams es una Promesa
+}): Promise<JSX.Element> {
+  const { session_id } = await searchParams;
+
+  return (
+    <div className="page-container">
+      <h1>Resultado de la Donación</h1>
+      <Suspense fallback={<p>Cargando resultado...</p>}>
+        <ResultContent session_id={session_id} />
+      </Suspense>
+    </div>
   );
 }
